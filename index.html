@@ -1,1028 +1,192 @@
 <!DOCTYPE html>
-
 <html lang="tr">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="apple-mobile-web-app-title" content="TAC-MAP">
-  <meta name="theme-color" content="#050c05">
-  <title>TAC-MAP</title>
-  <link rel="manifest" href="manifest.json">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&display=swap" rel="stylesheet">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-  <style>
-    :root {
-      --bg: #050c05;
-      --bg2: #0a1a0a;
-      --green: #22c55e;
-      --green-dim: #166534;
-      --amber: #f59e0b;
-      --text: #86efac;
-      --text-dim: #4ade80;
-      --border: #1a3a1a;
-      --danger: #ef4444;
-      --panel-h: 160px;
-    }
-    * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
-    body { background: var(--bg); color: var(--text); font-family: 'Share Tech Mono', 'Courier New', monospace; height: 100dvh; display: flex; flex-direction: column; overflow: hidden; }
-
-```
-/* HEADER */
-#header {
-  background: var(--bg2);
-  border-bottom: 1px solid var(--green-dim);
-  padding: 6px 10px;
-  flex-shrink: 0;
-  position: relative;
-  z-index: 1000;
-}
-.header-top {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-.app-title {
-  color: var(--amber);
-  font-size: 14px;
-  font-weight: bold;
-  letter-spacing: 4px;
-  text-shadow: 0 0 10px var(--amber);
-}
-.gps-status {
-  font-size: 11px;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-.gps-dot {
-  width: 8px; height: 8px;
-  border-radius: 50%;
-  background: var(--danger);
-  animation: pulse 1.5s infinite;
-}
-.gps-dot.active { background: var(--green); }
-@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.4} }
-
-.coord-display {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-.coord-row {
-  display: flex;
-  gap: 10px;
-  font-size: 11px;
-  color: var(--text);
-}
-.coord-label { color: var(--amber); font-size: 10px; }
-.coord-val { color: var(--green); }
-.coord-alt { color: var(--text-dim); font-size: 10px; margin-left: auto; }
-
-/* COORD TOGGLE */
-.coord-toggle-bar {
-  display: flex;
-  gap: 4px;
-  margin-top: 4px;
-}
-.coord-btn {
-  background: var(--bg);
-  border: 1px solid var(--green-dim);
-  color: var(--text-dim);
-  font-family: inherit;
-  font-size: 10px;
-  padding: 2px 6px;
-  cursor: pointer;
-  border-radius: 2px;
-}
-.coord-btn.active {
-  background: var(--green-dim);
-  color: var(--amber);
-  border-color: var(--green);
-}
-
-/* MAP */
-#map {
-  flex: 1;
-  position: relative;
-  z-index: 1;
-}
-.leaflet-container { background: #0a1a0a !important; }
-
-/* RESULT PANEL */
-#result-panel {
-  position: fixed;
-  bottom: 56px;
-  left: 0; right: 0;
-  background: var(--bg2);
-  border-top: 2px solid var(--amber);
-  padding: 12px 16px;
-  z-index: 2000;
-  transform: translateY(100%);
-  transition: transform 0.3s ease;
-  max-height: 240px;
-  overflow-y: auto;
-}
-#result-panel.visible { transform: translateY(0); }
-.result-title {
-  color: var(--amber);
-  font-size: 12px;
-  letter-spacing: 2px;
-  margin-bottom: 8px;
-  display: flex;
-  justify-content: space-between;
-}
-.result-close {
-  background: none; border: none;
-  color: var(--danger); cursor: pointer;
-  font-size: 16px; font-family: inherit;
-}
-.result-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 4px 0;
-  border-bottom: 1px solid var(--border);
-  font-size: 13px;
-}
-.result-key { color: var(--text-dim); font-size: 11px; }
-.result-val { color: var(--green); font-size: 14px; }
-.result-val.highlight { color: var(--amber); font-size: 16px; }
-
-/* TOOLBAR */
-#toolbar {
-  background: var(--bg2);
-  border-top: 1px solid var(--green-dim);
-  display: flex;
-  height: 56px;
-  flex-shrink: 0;
-  z-index: 1000;
-}
-.tool-btn {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 2px;
-  background: none;
-  border: none;
-  border-right: 1px solid var(--border);
-  color: var(--text-dim);
-  font-family: inherit;
-  font-size: 9px;
-  cursor: pointer;
-  transition: all 0.2s;
-  padding: 4px 2px;
-}
-.tool-btn:last-child { border-right: none; }
-.tool-btn .icon { font-size: 18px; line-height: 1; }
-.tool-btn.active {
-  background: var(--green-dim);
-  color: var(--amber);
-  box-shadow: inset 0 2px 0 var(--green);
-}
-.tool-btn:active { background: var(--border); }
-
-/* MODAL */
-.modal-overlay {
-  position: fixed; inset: 0;
-  background: rgba(0,0,0,0.8);
-  z-index: 3000;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-}
-.modal-overlay.hidden { display: none; }
-.modal-box {
-  background: var(--bg2);
-  border: 1px solid var(--green);
-  border-radius: 4px;
-  padding: 20px;
-  width: 100%;
-  max-width: 340px;
-}
-.modal-title {
-  color: var(--amber);
-  font-size: 13px;
-  letter-spacing: 3px;
-  margin-bottom: 16px;
-}
-.modal-input {
-  width: 100%;
-  background: var(--bg);
-  border: 1px solid var(--green-dim);
-  color: var(--text);
-  font-family: inherit;
-  font-size: 14px;
-  padding: 10px;
-  margin-bottom: 12px;
-  border-radius: 2px;
-  outline: none;
-}
-.modal-input:focus { border-color: var(--green); }
-.modal-input::placeholder { color: var(--green-dim); }
-.modal-row { display: flex; gap: 8px; margin-bottom: 10px; }
-.modal-label {
-  color: var(--text-dim);
-  font-size: 11px;
-  margin-bottom: 4px;
-}
-.modal-field { flex: 1; }
-.modal-unit {
-  color: var(--text-dim);
-  font-size: 11px;
-  align-self: flex-end;
-  padding-bottom: 12px;
-}
-.btn-row { display: flex; gap: 8px; margin-top: 4px; }
-.btn {
-  flex: 1;
-  background: none;
-  border: 1px solid var(--green-dim);
-  color: var(--text-dim);
-  font-family: inherit;
-  font-size: 12px;
-  padding: 10px;
-  cursor: pointer;
-  border-radius: 2px;
-  letter-spacing: 1px;
-}
-.btn.primary {
-  background: var(--green-dim);
-  border-color: var(--green);
-  color: var(--amber);
-}
-
-/* WAYPOINT LIST */
-#wp-panel {
-  position: fixed;
-  top: 0; right: 0; bottom: 56px;
-  width: 260px;
-  background: var(--bg2);
-  border-left: 1px solid var(--green-dim);
-  z-index: 1500;
-  transform: translateX(100%);
-  transition: transform 0.3s;
-  display: flex;
-  flex-direction: column;
-}
-#wp-panel.open { transform: translateX(0); }
-.wp-header {
-  padding: 12px;
-  border-bottom: 1px solid var(--border);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-.wp-title { color: var(--amber); font-size: 12px; letter-spacing: 2px; }
-.wp-close { background:none; border:none; color:var(--danger); font-size:18px; cursor:pointer; }
-.wp-list { flex:1; overflow-y:auto; padding: 8px; }
-.wp-item {
-  padding: 8px;
-  border: 1px solid var(--border);
-  margin-bottom: 6px;
-  border-radius: 2px;
-  cursor: pointer;
-  transition: background 0.2s;
-}
-.wp-item:hover { background: var(--border); }
-.wp-item-name { color: var(--amber); font-size: 12px; margin-bottom: 2px; }
-.wp-item-coord { color: var(--text-dim); font-size: 10px; }
-.wp-item-del {
-  float: right;
-  background: none; border: none;
-  color: var(--danger); cursor: pointer;
-  font-size: 14px;
-}
-
-/* MODE INDICATOR */
-#mode-indicator {
-  position: fixed;
-  top: 80px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(5,12,5,0.9);
-  border: 1px solid var(--amber);
-  color: var(--amber);
-  font-size: 11px;
-  letter-spacing: 2px;
-  padding: 4px 12px;
-  z-index: 1000;
-  border-radius: 2px;
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 0.3s;
-}
-#mode-indicator.visible { opacity: 1; }
-
-/* SCAN LINE */
-#header::after {
-  content: '';
-  position: absolute;
-  left: 0; right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--green), transparent);
-  bottom: -1px;
-  animation: scan 3s linear infinite;
-  opacity: 0.5;
-}
-@keyframes scan { 0%{opacity:0.1} 50%{opacity:0.6} 100%{opacity:0.1} }
-
-/* LEAFLET CUSTOM */
-.leaflet-popup-content-wrapper {
-  background: var(--bg2) !important;
-  border: 1px solid var(--green) !important;
-  border-radius: 2px !important;
-  color: var(--text) !important;
-  box-shadow: 0 0 10px rgba(34,197,94,0.3) !important;
-}
-.leaflet-popup-tip { background: var(--bg2) !important; }
-.leaflet-popup-content { font-family: 'Share Tech Mono', monospace !important; font-size: 12px !important; }
-
-.wp-marker-icon {
-  background: var(--amber);
-  border: 2px solid var(--bg);
-  border-radius: 50% 50% 50% 0;
-  transform: rotate(-45deg);
-  width: 14px; height: 14px;
-  box-shadow: 0 0 6px var(--amber);
-}
-.measure-dot {
-  background: var(--danger);
-  border: 2px solid white;
-  border-radius: 50%;
-  width: 12px; height: 12px;
-  box-shadow: 0 0 6px var(--danger);
-}
-
-/* SCROLLBAR */
-::-webkit-scrollbar { width: 4px; }
-::-webkit-scrollbar-track { background: var(--bg); }
-::-webkit-scrollbar-thumb { background: var(--green-dim); border-radius: 2px; }
-```
-
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="TAC-MAP">
+<meta name="theme-color" content="#050c05">
+<title>TAC-MAP</title>
+<link rel="manifest" href="manifest.json">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+body{background:#050c05;color:#86efac;font-family:'Courier New',monospace;height:100dvh;display:flex;flex-direction:column;overflow:hidden}
+#hdr{background:#0a1a0a;border-bottom:1px solid #166534;padding:6px 10px;flex-shrink:0;z-index:1000}
+.htop{display:flex;justify-content:space-between;align-items:center;margin-bottom:3px}
+.title{color:#f59e0b;font-size:13px;font-weight:bold;letter-spacing:4px;text-shadow:0 0 8px #f59e0b}
+.gps-row{display:flex;align-items:center;gap:5px;font-size:11px}
+.dot{width:8px;height:8px;border-radius:50%;background:#ef4444;flex-shrink:0}
+.dot.on{background:#22c55e;animation:blink 1.5s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.crows{display:flex;flex-direction:column;gap:2px}
+.crow{display:flex;gap:8px;font-size:11px;flex-wrap:wrap}
+.cl{color:#f59e0b;font-size:10px}.cv{color:#22c55e}.ca{color:#4ade80;font-size:10px;margin-left:auto}
+.ctabs{display:flex;gap:4px;margin-top:3px}
+.ctab{background:#050c05;border:1px solid #166534;color:#4ade80;font-family:inherit;font-size:10px;padding:2px 7px;cursor:pointer;border-radius:2px}
+.ctab.on{background:#166534;color:#f59e0b;border-color:#22c55e}
+#compass-wrap{position:fixed;top:110px;right:10px;z-index:900;display:flex;flex-direction:column;align-items:center;gap:2px}
+#compass-ring{width:54px;height:54px;border-radius:50%;border:2px solid #166534;background:rgba(5,12,5,0.85);position:relative;display:flex;align-items:center;justify-content:center}
+#compass-needle{width:4px;height:44px;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%) rotate(0deg);transform-origin:center center;transition:transform 0.3s ease}
+.needle-n{position:absolute;top:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-bottom:22px solid #ef4444}
+.needle-s{position:absolute;bottom:0;left:50%;transform:translateX(-50%);width:0;height:0;border-left:5px solid transparent;border-right:5px solid transparent;border-top:22px solid #86efac}
+.compass-n-label{position:absolute;top:2px;left:50%;transform:translateX(-50%);color:#ef4444;font-size:8px;font-weight:bold;z-index:1}
+#compass-deg{color:#f59e0b;font-size:10px;letter-spacing:1px}
+#compass-dir{color:#86efac;font-size:10px}
+#map{flex:1;position:relative;z-index:1}
+.leaflet-container{background:#0a1a0a!important}
+#north-arrow{position:absolute;bottom:70px;right:10px;z-index:800;width:30px;height:30px;display:flex;flex-direction:column;align-items:center;justify-content:center;background:rgba(5,12,5,0.8);border:1px solid #166534;border-radius:50%;pointer-events:none}
+#north-arrow span{color:#ef4444;font-size:14px;font-weight:bold;line-height:1}
+#north-arrow small{color:#86efac;font-size:8px;line-height:1}
+#rpanel{position:fixed;bottom:56px;left:0;right:0;background:#0a1a0a;border-top:2px solid #f59e0b;padding:10px 14px;z-index:2000;transform:translateY(100%);transition:transform .3s;max-height:220px;overflow-y:auto}
+#rpanel.show{transform:translateY(0)}
+.rtitle{color:#f59e0b;font-size:11px;letter-spacing:2px;margin-bottom:6px;display:flex;justify-content:space-between}
+.rclose{background:none;border:none;color:#ef4444;cursor:pointer;font-size:16px;font-family:inherit}
+.rrow{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px solid #1a3a1a;font-size:12px}
+.rk{color:#4ade80;font-size:10px}.rv{color:#22c55e}.rv.hl{color:#f59e0b;font-size:15px}
+#tbar{background:#0a1a0a;border-top:1px solid #166534;display:flex;height:56px;flex-shrink:0;z-index:1000}
+.tbtn{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;background:none;border:none;border-right:1px solid #1a3a1a;color:#4ade80;font-family:inherit;font-size:8px;cursor:pointer;padding:3px 1px;transition:all .15s;-webkit-user-select:none;user-select:none}
+.tbtn:last-child{border-right:none}
+.tbtn .ic{font-size:17px;line-height:1}
+.tbtn.on{background:#166534;color:#f59e0b;box-shadow:inset 0 2px 0 #22c55e}
+.tbtn:active{opacity:.6}
+#toast{position:fixed;top:108px;left:50%;transform:translateX(-50%);background:rgba(5,12,5,.92);border:1px solid #f59e0b;color:#f59e0b;font-size:10px;letter-spacing:1px;padding:4px 10px;z-index:1500;border-radius:2px;pointer-events:none;opacity:0;transition:opacity .3s;white-space:nowrap}
+#toast.show{opacity:1}
+.overlay{position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:3000;display:flex;align-items:center;justify-content:center;padding:20px}
+.overlay.hide{display:none}
+.mbox{background:#0a1a0a;border:1px solid #22c55e;border-radius:4px;padding:18px;width:100%;max-width:320px}
+.mtitle{color:#f59e0b;font-size:12px;letter-spacing:3px;margin-bottom:14px}
+.minput{width:100%;background:#050c05;border:1px solid #166534;color:#86efac;font-family:inherit;font-size:13px;padding:9px;margin-bottom:10px;border-radius:2px;outline:none}
+.minput:focus{border-color:#22c55e}
+.minput::placeholder{color:#166534}
+.mlabel{color:#4ade80;font-size:10px;margin-bottom:3px}
+.mrow{display:flex;gap:8px;margin-bottom:8px}
+.mfield{flex:1}.munit{color:#4ade80;font-size:10px;align-self:flex-end;padding-bottom:11px}
+.brow{display:flex;gap:8px;margin-top:6px}
+.btn{flex:1;background:none;border:1px solid #166534;color:#4ade80;font-family:inherit;font-size:11px;padding:9px;cursor:pointer;border-radius:2px;letter-spacing:1px}
+.btn.p{background:#166534;border-color:#22c55e;color:#f59e0b}
+#eprev{display:none;margin:10px 0;padding:8px;border:1px solid #166534}
+#wpp{position:fixed;top:0;right:0;bottom:56px;width:250px;background:#0a1a0a;border-left:1px solid #166534;z-index:1500;transform:translateX(100%);transition:transform .3s;display:flex;flex-direction:column}
+#wpp.open{transform:translateX(0)}
+.wpph{padding:10px;border-bottom:1px solid #1a3a1a;display:flex;justify-content:space-between;align-items:center}
+.wppt{color:#f59e0b;font-size:11px;letter-spacing:2px}
+.wppc{background:none;border:none;color:#ef4444;font-size:18px;cursor:pointer}
+#wplist{flex:1;overflow-y:auto;padding:6px}
+.wpi{padding:7px;border:1px solid #1a3a1a;margin-bottom:5px;border-radius:2px;cursor:pointer}
+.wpin{color:#f59e0b;font-size:11px;margin-bottom:2px}
+.wpic{color:#4ade80;font-size:10px}
+.wpid{float:right;background:none;border:none;color:#ef4444;cursor:pointer;font-size:13px}
+.leaflet-popup-content-wrapper{background:#0a1a0a!important;border:1px solid #22c55e!important;border-radius:2px!important;color:#86efac!important}
+.leaflet-popup-tip{background:#0a1a0a!important}
+.leaflet-popup-content{font-family:'Courier New',monospace!important;font-size:11px!important}
+::-webkit-scrollbar{width:3px}::-webkit-scrollbar-track{background:#050c05}::-webkit-scrollbar-thumb{background:#166534}
+</style>
 </head>
 <body>
-
-<!-- HEADER -->
-
-<div id="header">
-  <div class="header-top">
-    <div class="app-title">◈ TAC-MAP</div>
-    <div class="gps-status">
-      <div class="gps-dot" id="gps-dot"></div>
-      <span id="gps-acc-text">GPS: ---</span>
-    </div>
+<div id="hdr">
+  <div class="htop">
+    <div class="title">◈ TAC-MAP</div>
+    <div class="gps-row"><div class="dot" id="gdot"></div><span id="gtxt">GPS: ---</span></div>
   </div>
-  <div class="coord-display">
-    <div class="coord-row">
-      <span class="coord-label">LAT</span>
-      <span class="coord-val" id="coord-lat">-- -- --</span>
-      <span class="coord-label">LON</span>
-      <span class="coord-val" id="coord-lon">-- -- --</span>
-      <span class="coord-alt" id="coord-alt">ALT: ---m</span>
-    </div>
-    <div class="coord-row">
-      <span class="coord-label">UTM</span>
-      <span class="coord-val" id="coord-utm">---</span>
-    </div>
+  <div class="crows">
+    <div class="crow"><span class="cl">LAT</span><span class="cv" id="clat">-- -- --</span><span class="cl">LON</span><span class="cv" id="clon">-- -- --</span><span class="ca" id="calt">ALT:---m</span></div>
+    <div class="crow"><span class="cl">UTM</span><span class="cv" id="cutm">---</span><span class="ca" id="cspd">SPD:---</span></div>
   </div>
-  <div class="coord-toggle-bar">
-    <button class="coord-btn active" onclick="setCoordMode('DMS')" id="btn-dms">DMS</button>
-    <button class="coord-btn" onclick="setCoordMode('DD')" id="btn-dd">DD</button>
-    <button class="coord-btn" onclick="setCoordMode('UTM')" id="btn-utm">UTM</button>
+  <div class="ctabs">
+    <button class="ctab on" id="tdms" onclick="setCM('DMS')">DMS</button>
+    <button class="ctab" id="tdd" onclick="setCM('DD')">DD</button>
+    <button class="ctab" id="tutm" onclick="setCM('UTM')">UTM</button>
   </div>
 </div>
-
-<!-- MAP -->
-
-<div id="map"></div>
-
-<!-- MODE INDICATOR -->
-
-<div id="mode-indicator">MOD: GÖRÜNTÜLEME</div>
-
-<!-- RESULT PANEL -->
-
-<div id="result-panel">
-  <div class="result-title">
-    <span id="result-title-text">SONUÇ</span>
-    <button class="result-close" onclick="hideResult()">✕</button>
+<div id="map"><div id="north-arrow"><span>▲</span><small>K</small></div></div>
+<div id="compass-wrap">
+  <div id="compass-ring">
+    <span class="compass-n-label">K</span>
+    <div id="compass-needle"><div class="needle-n"></div><div class="needle-s"></div></div>
   </div>
-  <div id="result-body"></div>
+  <div id="compass-deg">---°</div>
+  <div id="compass-dir">---</div>
 </div>
-
-<!-- TOOLBAR -->
-
-<div id="toolbar">
-  <button class="tool-btn active" id="btn-view" onclick="setMode('VIEW')">
-    <span class="icon">🗺️</span>
-    <span>HARİTA</span>
-  </button>
-  <button class="tool-btn" id="btn-gps" onclick="setMode('GPS')">
-    <span class="icon">📡</span>
-    <span>GPS TAKİP</span>
-  </button>
-  <button class="tool-btn" id="btn-wp" onclick="setMode('WAYPOINT')">
-    <span class="icon">📌</span>
-    <span>NOKTA</span>
-  </button>
-  <button class="tool-btn" id="btn-measure" onclick="setMode('MEASURE')">
-    <span class="icon">📏</span>
-    <span>MESAFE</span>
-  </button>
-  <button class="tool-btn" id="btn-azimuth" onclick="setMode('AZIMUTH')">
-    <span class="icon">🧭</span>
-    <span>AZİMUT</span>
-  </button>
-  <button class="tool-btn" id="btn-elev" onclick="openElevModal()">
-    <span class="icon">📐</span>
-    <span>YÜKSELİŞ</span>
-  </button>
-  <button class="tool-btn" id="btn-wplist" onclick="toggleWpPanel()">
-    <span class="icon">📋</span>
-    <span>NOKTALAR</span>
-  </button>
+<div id="toast">MOD</div>
+<div id="rpanel">
+  <div class="rtitle"><span id="rtitle">SONUÇ</span><button class="rclose" onclick="hideR()">✕</button></div>
+  <div id="rbody"></div>
 </div>
-
-<!-- WAYPOINT PANEL -->
-
-<div id="wp-panel">
-  <div class="wp-header">
-    <span class="wp-title">◈ WAYPOINT LİSTESİ</span>
-    <button class="wp-close" onclick="toggleWpPanel()">✕</button>
-  </div>
-  <div class="wp-list" id="wp-list"></div>
+<div id="tbar">
+  <button class="tbtn on" id="bview" ontouchstart="" onclick="setMode('VIEW')"><span class="ic">🗺️</span>HARİTA</button>
+  <button class="tbtn" id="bgps" ontouchstart="" onclick="setMode('GPS')"><span class="ic">📡</span>GPS TAKİP</button>
+  <button class="tbtn" id="bwp" ontouchstart="" onclick="setMode('WP')"><span class="ic">📌</span>NOKTA</button>
+  <button class="tbtn" id="bmeas" ontouchstart="" onclick="setMode('MEAS')"><span class="ic">📏</span>MESAFE</button>
+  <button class="tbtn" id="baz" ontouchstart="" onclick="setMode('AZ')"><span class="ic">🧭</span>AZİMUT</button>
+  <button class="tbtn" id="belev" ontouchstart="" onclick="openElev()"><span class="ic">📐</span>YÜKSELİŞ</button>
+  <button class="tbtn" id="bwpl" ontouchstart="" onclick="toggleWP()"><span class="ic">📋</span>NOKTALAR</button>
 </div>
-
-<!-- WAYPOINT NAME MODAL -->
-
-<div class="modal-overlay hidden" id="wp-modal">
-  <div class="modal-box">
-    <div class="modal-title">◈ NOKTA EKLE</div>
-    <input class="modal-input" id="wp-name-input" placeholder="Nokta adı (ör: HEDEF-1)" maxlength="20">
-    <div id="wp-coord-preview" style="color:var(--text-dim);font-size:11px;margin-bottom:12px;"></div>
-    <div class="btn-row">
-      <button class="btn" onclick="closeWpModal()">İPTAL</button>
-      <button class="btn primary" onclick="confirmWaypoint()">EKLE</button>
-    </div>
+<div id="wpp">
+  <div class="wpph"><span class="wppt">◈ WAYPOINT LİSTESİ</span><button class="wppc" onclick="toggleWP()">✕</button></div>
+  <div id="wplist"></div>
+</div>
+<div class="overlay hide" id="wpm">
+  <div class="mbox">
+    <div class="mtitle">◈ NOKTA EKLE</div>
+    <input class="minput" id="wpname" placeholder="Nokta adı (ör: HEDEF-1)" maxlength="20">
+    <div id="wpinfo" style="color:#4ade80;font-size:10px;margin-bottom:10px;line-height:1.5"></div>
+    <div class="brow"><button class="btn" onclick="closeWPM()">İPTAL</button><button class="btn p" onclick="confirmWP()">EKLE ✓</button></div>
   </div>
 </div>
-
-<!-- ELEVATION MODAL -->
-
-<div class="modal-overlay hidden" id="elev-modal">
-  <div class="modal-box">
-    <div class="modal-title">◈ YÜKSELİŞ AÇISI HESAPLA</div>
-    <div class="modal-row">
-      <div class="modal-field">
-        <div class="modal-label">YATAY MESAFE</div>
-        <input class="modal-input" id="elev-dist" type="number" placeholder="0" min="0">
-      </div>
-      <div class="modal-unit">metre</div>
-    </div>
-    <div class="modal-row">
-      <div class="modal-field">
-        <div class="modal-label">YÜKSEKLİK FARKI (+/-)</div>
-        <input class="modal-input" id="elev-height" type="number" placeholder="0">
-      </div>
-      <div class="modal-unit">metre</div>
-    </div>
-    <div id="elev-result" style="display:none;margin:12px 0;padding:10px;border:1px solid var(--green-dim);">
-      <div class="result-row"><span class="result-key">YÜKSELİŞ AÇISI</span><span class="result-val highlight" id="elev-angle">---</span></div>
-      <div class="result-row"><span class="result-key">EĞİM (%)</span><span class="result-val" id="elev-slope">---</span></div>
-      <div class="result-row"><span class="result-key">GERÇEK MESAFE</span><span class="result-val" id="elev-true-dist">---</span></div>
-    </div>
-    <div class="btn-row">
-      <button class="btn" onclick="closeElevModal()">KAPAT</button>
-      <button class="btn primary" onclick="calcElevation()">HESAPLA</button>
-    </div>
+<div class="overlay hide" id="elevm">
+  <div class="mbox">
+    <div class="mtitle">◈ YÜKSELİŞ AÇISI</div>
+    <div class="mrow"><div class="mfield"><div class="mlabel">YATAY MESAFE</div><input class="minput" id="edist" type="number" placeholder="metre" min="0"></div><div class="munit">m</div></div>
+    <div class="mrow"><div class="mfield"><div class="mlabel">YÜKSEKLİK FARKI (+/-)</div><input class="minput" id="eheight" type="number" placeholder="metre"></div><div class="munit">m</div></div>
+    <div id="eprev"><div class="rrow"><span class="rk">YÜKSELİŞ AÇISI</span><span class="rv hl" id="eang">---</span></div><div class="rrow"><span class="rk">EĞİM %</span><span class="rv" id="eslp">---</span></div><div class="rrow"><span class="rk">GERÇEK MESAFE</span><span class="rv" id="etd">---</span></div></div>
+    <div class="brow"><button class="btn" onclick="closeElev()">KAPAT</button><button class="btn p" onclick="calcElev()">HESAPLA</button></div>
   </div>
 </div>
-
 <script>
-// ============================================================
-// APP STATE
-// ============================================================
-let map, userMarker, accuracyCircle, userLat = null, userLng = null, userAlt = null;
-let currentMode = 'VIEW';
-let measurePoints = [], measureMarkers = [], measureLine = null;
-let azimuthMarker = null, azimuthLine = null;
-let waypoints = [];
-let pendingWpLat = null, pendingWpLng = null;
-let coordMode = 'DMS';
-let gpsFollow = false;
-let wpCounter = 1;
-
-// ============================================================
-// MAP INIT
-// ============================================================
-function initMap() {
-  map = L.map('map', {
-    zoomControl: false,
-    attributionControl: false,
-    center: [39.0, 35.0],
-    zoom: 6
-  });
-
-  // OSM tile layer - cached by service worker
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-    minZoom: 3,
-    subdomains: 'abc',
-    attribution: '© OSM',
-    crossOrigin: true
-  }).addTo(map);
-
-  // Zoom control top-right
-  L.control.zoom({ position: 'topright' }).addTo(map);
-
-  // Attribution small
-  L.control.attribution({ position: 'bottomleft', prefix: false }).addTo(map);
-
-  // Map click handler
-  map.on('click', onMapClick);
-}
-
-// ============================================================
-// GPS
-// ============================================================
-function initGPS() {
-  if (!navigator.geolocation) {
-    updateGpsStatus('GPS YOK', false);
-    return;
-  }
-  navigator.geolocation.watchPosition(onGpsUpdate, onGpsError, {
-    enableHighAccuracy: true,
-    maximumAge: 2000,
-    timeout: 10000
-  });
-}
-
-function onGpsUpdate(pos) {
-  userLat = pos.coords.latitude;
-  userLng = pos.coords.longitude;
-  userAlt = pos.coords.altitude;
-  const acc = Math.round(pos.coords.accuracy);
-
-  updateGpsStatus(`±${acc}m`, true);
-  updateCoordDisplay(userLat, userLng, userAlt);
-
-  const latlng = [userLat, userLng];
-
-  if (!userMarker) {
-    userMarker = L.circleMarker(latlng, {
-      radius: 8, color: '#22c55e', fillColor: '#22c55e',
-      fillOpacity: 1, weight: 2
-    }).addTo(map).bindPopup('<b style="color:#f59e0b">SEN BURADASIN</b>');
-
-    accuracyCircle = L.circle(latlng, {
-      radius: acc, color: '#22c55e', fillColor: '#22c55e',
-      fillOpacity: 0.08, weight: 1, dashArray: '4'
-    }).addTo(map);
-
-    // First fix → center map
-    map.setView(latlng, 13);
-  } else {
-    userMarker.setLatLng(latlng);
-    accuracyCircle.setLatLng(latlng).setRadius(acc);
-  }
-
-  if (gpsFollow) {
-    map.setView(latlng);
-  }
-}
-
-function onGpsError(err) {
-  updateGpsStatus('GPS HATA', false);
-}
-
-function updateGpsStatus(text, active) {
-  document.getElementById('gps-dot').className = 'gps-dot' + (active ? ' active' : '');
-  document.getElementById('gps-acc-text').textContent = `GPS: ${text}`;
-}
-
-// ============================================================
-// COORDINATE DISPLAY
-// ============================================================
-function setCoordMode(mode) {
-  coordMode = mode;
-  ['DMS','DD','UTM'].forEach(m => {
-    document.getElementById('btn-' + m.toLowerCase()).classList.toggle('active', m === mode);
-  });
-  if (userLat !== null) updateCoordDisplay(userLat, userLng, userAlt);
-}
-
-function updateCoordDisplay(lat, lng, alt) {
-  let latStr, lonStr;
-  if (coordMode === 'DMS') {
-    latStr = toDMS(lat, 'lat');
-    lonStr = toDMS(lng, 'lon');
-  } else if (coordMode === 'DD') {
-    latStr = lat.toFixed(6) + '°';
-    lonStr = lng.toFixed(6) + '°';
-  } else {
-    const utm = latLngToUTM(lat, lng);
-    latStr = utm.zone + utm.hemisphere;
-    lonStr = utm.easting + ' ' + utm.northing;
-  }
-
-  document.getElementById('coord-lat').textContent = latStr;
-  document.getElementById('coord-lon').textContent = lonStr;
-  document.getElementById('coord-utm').textContent = latLngToUTM(lat, lng).string;
-  document.getElementById('coord-alt').textContent = alt !== null ? `ALT: ${Math.round(alt)}m` : 'ALT: ---m';
-}
-
-function toDMS(deg, type) {
-  const d = Math.abs(deg);
-  const dd = Math.floor(d);
-  const mm = Math.floor((d - dd) * 60);
-  const ss = ((d - dd - mm/60) * 3600).toFixed(1);
-  const dir = type === 'lat' ? (deg >= 0 ? 'K' : 'G') : (deg >= 0 ? 'D' : 'B');
-  return `${dd}° ${mm}' ${ss}" ${dir}`;
-}
-
-// ============================================================
-// UTM CONVERSION
-// ============================================================
-function latLngToUTM(lat, lng) {
-  const a = 6378137.0;
-  const f = 1 / 298.257223563;
-  const b = a * (1 - f);
-  const e2 = 1 - (b * b) / (a * a);
-  const ePrime2 = e2 / (1 - e2);
-  const k0 = 0.9996;
-
-  const zone = Math.floor((lng + 180) / 6) + 1;
-  const lambda0 = ((zone - 1) * 6 - 180 + 3) * Math.PI / 180;
-  const phi = lat * Math.PI / 180;
-  const lambda = lng * Math.PI / 180;
-
-  const N = a / Math.sqrt(1 - e2 * Math.sin(phi) ** 2);
-  const T = Math.tan(phi) ** 2;
-  const C = ePrime2 * Math.cos(phi) ** 2;
-  const A = Math.cos(phi) * (lambda - lambda0);
-
-  const M = a * (
-    (1 - e2 / 4 - 3 * e2 ** 2 / 64 - 5 * e2 ** 3 / 256) * phi
-    - (3 * e2 / 8 + 3 * e2 ** 2 / 32 + 45 * e2 ** 3 / 1024) * Math.sin(2 * phi)
-    + (15 * e2 ** 2 / 256 + 45 * e2 ** 3 / 1024) * Math.sin(4 * phi)
-    - (35 * e2 ** 3 / 3072) * Math.sin(6 * phi)
-  );
-
-  const easting = k0 * N * (
-    A + (1 - T + C) * A ** 3 / 6
-    + (5 - 18 * T + T ** 2 + 72 * C - 58 * ePrime2) * A ** 5 / 120
-  ) + 500000;
-
-  let northing = k0 * (
-    M + N * Math.tan(phi) * (
-      A ** 2 / 2
-      + (5 - T + 9 * C + 4 * C ** 2) * A ** 4 / 24
-      + (61 - 58 * T + T ** 2 + 600 * C - 330 * ePrime2) * A ** 6 / 720
-    )
-  );
-  if (lat < 0) northing += 10000000;
-
-  const hemi = lat >= 0 ? 'N' : 'S';
-  const E = Math.round(easting).toString().padStart(7, '0');
-  const Ns = Math.round(northing).toString().padStart(8, '0');
-
-  return {
-    zone, hemisphere: hemi,
-    easting: Math.round(easting),
-    northing: Math.round(northing),
-    string: `${zone}${hemi} ${E} ${Ns}`
-  };
-}
-
-// ============================================================
-// DISTANCE & BEARING
-// ============================================================
-function haversine(lat1, lon1, lat2, lon2) {
-  const R = 6371000;
-  const dLat = (lat2 - lat1) * Math.PI / 180;
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = Math.sin(dLat / 2) ** 2 +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon / 2) ** 2;
-  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-}
-
-function bearing(lat1, lon1, lat2, lon2) {
-  const dLon = (lon2 - lon1) * Math.PI / 180;
-  const phi1 = lat1 * Math.PI / 180;
-  const phi2 = lat2 * Math.PI / 180;
-  const y = Math.sin(dLon) * Math.cos(phi2);
-  const x = Math.cos(phi1) * Math.sin(phi2) - Math.sin(phi1) * Math.cos(phi2) * Math.cos(dLon);
-  return ((Math.atan2(y, x) * 180 / Math.PI) + 360) % 360;
-}
-
-function formatDistance(m) {
-  if (m >= 1000) return (m / 1000).toFixed(2) + ' km';
-  return Math.round(m) + ' m';
-}
-
-function bearingToDirection(deg) {
-  const dirs = ['K', 'KKD', 'KD', 'DKD', 'D', 'DGD', 'GD', 'GGD', 'G', 'GGB', 'GB', 'BGB', 'B', 'BKB', 'KB', 'KKB'];
-  return dirs[Math.round(deg / 22.5) % 16];
-}
-
-// ============================================================
-// MODE MANAGEMENT
-// ============================================================
-function setMode(mode) {
-  // Clear previous state
-  if (currentMode === 'MEASURE') clearMeasure();
-  if (currentMode === 'AZIMUTH') clearAzimuth();
-  if (mode !== 'GPS') gpsFollow = false;
-
-  currentMode = mode;
-
-  // Update toolbar buttons
-  document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
-
-  const modeMap = {
-    'VIEW': 'btn-view', 'GPS': 'btn-gps',
-    'WAYPOINT': 'btn-wp', 'MEASURE': 'btn-measure',
-    'AZIMUTH': 'btn-azimuth'
-  };
-  if (modeMap[mode]) document.getElementById(modeMap[mode]).classList.add('active');
-
-  // Mode-specific setup
-  const modeLabels = {
-    VIEW: '🗺️  GÖRÜNTÜLEME MODU',
-    GPS: '📡  GPS TAKİP AKTİF',
-    WAYPOINT: '📌  HARİTAYA DOKUN → NOKTA EKLE',
-    MEASURE: '📏  2 NOKTA SEÇ → MESAFE HESAPLA',
-    AZIMUTH: '🧭  HEDEF SEÇ → AZİMUT HESAPLA'
-  };
-  showModeIndicator(modeLabels[mode] || mode);
-
-  if (mode === 'GPS') {
-    gpsFollow = true;
-    if (userLat !== null) map.setView([userLat, userLng], 15);
-  }
-
-  map.getContainer().style.cursor = ['WAYPOINT', 'MEASURE', 'AZIMUTH'].includes(mode) ? 'crosshair' : '';
-}
-
-function showModeIndicator(text) {
-  const el = document.getElementById('mode-indicator');
-  el.textContent = text;
-  el.classList.add('visible');
-  clearTimeout(window._modeTimer);
-  window._modeTimer = setTimeout(() => el.classList.remove('visible'), 3000);
-}
-
-// ============================================================
-// MAP CLICK HANDLER
-// ============================================================
-function onMapClick(e) {
-  const { lat, lng } = e.latlng;
-
-  if (currentMode === 'WAYPOINT') {
-    pendingWpLat = lat;
-    pendingWpLng = lng;
-    document.getElementById('wp-name-input').value = `NOKTA-${wpCounter}`;
-    document.getElementById('wp-coord-preview').textContent =
-      `${toDMS(lat, 'lat')}  ${toDMS(lng, 'lon')}\nUTM: ${latLngToUTM(lat, lng).string}`;
-    document.getElementById('wp-modal').classList.remove('hidden');
-
-  } else if (currentMode === 'MEASURE') {
-    if (measurePoints.length >= 2) clearMeasure();
-    measurePoints.push([lat, lng]);
-    const dot = L.marker([lat, lng], {
-      icon: L.divIcon({ className: '', html: '<div class="measure-dot"></div>', iconSize: [12, 12], iconAnchor: [6, 6] })
-    }).addTo(map);
-    measureMarkers.push(dot);
-
-    if (measurePoints.length === 2) {
-      const [p1, p2] = measurePoints;
-      const dist = haversine(p1[0], p1[1], p2[0], p2[1]);
-      const b1 = bearing(p1[0], p1[1], p2[0], p2[1]);
-      const b2 = bearing(p2[0], p2[1], p1[0], p1[1]);
-
-      measureLine = L.polyline(measurePoints, {
-        color: '#ef4444', weight: 2, dashArray: '6,4'
-      }).addTo(map);
-
-      showResult('📏 MESAFE & AZİMUT', [
-        ['MESAFE', formatDistance(dist), true],
-        ['AZİMUT (1→2)', `${b1.toFixed(1)}° (${bearingToDirection(b1)})`, false],
-        ['AZİMUT (2→1)', `${b2.toFixed(1)}° (${bearingToDirection(b2)})`, false],
-        ['NOKTA 1', `${toDMS(p1[0],'lat')} ${toDMS(p1[1],'lon')}`, false],
-        ['NOKTA 2', `${toDMS(p2[0],'lat')} ${toDMS(p2[1],'lon')}`, false],
-      ]);
-    }
-
-  } else if (currentMode === 'AZIMUTH') {
-    clearAzimuth();
-    if (userLat === null) {
-      showResult('🧭 AZİMUT', [['HATA', 'GPS sinyali bekleniyor...', true]]);
-      return;
-    }
-
-    const dist = haversine(userLat, userLng, lat, lng);
-    const b1 = bearing(userLat, userLng, lat, lng);
-
-    azimuthMarker = L.marker([lat, lng], {
-      icon: L.divIcon({
-        className: '',
-        html: `<div style="width:16px;height:16px;border:2px solid #f59e0b;border-radius:50%;background:rgba(245,158,11,0.3);box-shadow:0 0 8px #f59e0b;"></div>`,
-        iconSize: [16, 16], iconAnchor: [8, 8]
-      })
-    }).addTo(map);
-
-    azimuthLine = L.polyline([[userLat, userLng], [lat, lng]], {
-      color: '#f59e0b', weight: 2, dashArray: '8,4'
-    }).addTo(map);
-
-    showResult('🧭 AZİMUT', [
-      ['AZİMUT', `${b1.toFixed(1)}°`, true],
-      ['YÖN', bearingToDirection(b1), false],
-      ['MESAFE', formatDistance(dist), true],
-      ['HEDEF', `${toDMS(lat,'lat')} ${toDMS(lng,'lon')}`, false],
-    ]);
-  }
-}
-
-// ============================================================
-// CLEAR TOOLS
-// ============================================================
-function clearMeasure() {
-  measurePoints = [];
-  measureMarkers.forEach(m => map.removeLayer(m));
-  measureMarkers = [];
-  if (measureLine) { map.removeLayer(measureLine); measureLine = null; }
-}
-
-function clearAzimuth() {
-  if (azimuthMarker) { map.removeLayer(azimuthMarker); azimuthMarker = null; }
-  if (azimuthLine) { map.removeLayer(azimuthLine); azimuthLine = null; }
-}
-
-// ============================================================
-// RESULT PANEL
-// ============================================================
-function showResult(title, rows) {
-  document.getElementById('result-title-text').textContent = title;
-  const body = document.getElementById('result-body');
-  body.innerHTML = rows.map(([key, val, hl]) =>
-    `<div class="result-row">
-      <span class="result-key">${key}</span>
-      <span class="result-val${hl ? ' highlight' : ''}">${val}</span>
-    </div>`
-  ).join('');
-  document.getElementById('result-panel').classList.add('visible');
-}
-
-function hideResult() {
-  document.getElementById('result-panel').classList.remove('visible');
-}
-
-// ============================================================
-// WAYPOINTS
-// ============================================================
-function openWpModal() { }
-
-function closeWpModal() {
-  document.getElementById('wp-modal').classList.add('hidden');
-  pendingWpLat = null;
-  pendingWpLng = null;
-}
-
-function confirmWaypoint() {
-  if (pendingWpLat === null) return;
-  const name = document.getElementById('wp-name-input').value.trim() || `NOKTA-${wpCounter}`;
-  addWaypoint(pendingWpLat, pendingWpLng, name);
-  closeWpModal();
-}
-
-function addWaypoint(lat, lng, name) {
-  const icon = L.divIcon({
-    className: '',
-    html: `<div style="
-      background:var(--amber,#f59e0b);
-      width:12px;height:12px;
-      border-radius:50% 50% 50% 0;
-      transform:rotate(-45deg);
-      border:2px solid #050c05;
-      box-shadow:0 0 6px #f59e0b;
-    "></div>`,
-    iconSize: [12, 12],
-    iconAnchor: [6, 12]
-  });
-
-  const marker = L.marker([lat, lng], { icon }).addTo(map);
-  marker.bindPopup(`
-    <div style="line-height:1.6">
-      <b style="color:#f59e0b">${name}</b><br>
-      <span style="color:#86efac;font-size:11px">${toDMS(lat,'lat')}<br>${toDMS(lng,'lon')}</span><br>
-      <span style="color:#4ade80;font-size:10px">UTM: ${latLngToUTM(lat,lng).string}</span>
-    </div>
-  `);
-
-  const wp = { id: wpCounter++, name, lat, lng, marker };
-  waypoints.push(wp);
-  renderWpList();
-}
-
-function deleteWaypoint(id) {
-  const idx = waypoints.findIndex(w => w.id === id);
-  if (idx === -1) return;
-  map.removeLayer(waypoints[idx].marker);
-  waypoints.splice(idx, 1);
-  renderWpList();
-}
-
-function renderWpList() {
-  const list = document.getElementById('wp-list');
-  if (waypoints.length === 0) {
-    list.innerHTML = '<div style="color:var(--text-dim);font-size:11px;padding:8px;text-align:center">Henüz nokta eklenmedi</div>';
-    return;
-  }
-  list.innerHTML = waypoints.map(w => `
-    <div class="wp-item" onclick="flyToWp(${w.id})">
-      <button class="wp-item-del" onclick="event.stopPropagation();deleteWaypoint(${w.id})">✕</button>
-      <div class="wp-item-name">📌 ${w.name}</div>
-      <div class="wp-item-coord">${toDMS(w.lat,'lat')}</div>
-      <div class="wp-item-coord">${toDMS(w.lng,'lon')}</div>
-      ${userLat !== null ? `<div class="wp-item-coord" style="color:var(--amber);margin-top:2px">📏 ${formatDistance(haversine(userLat,userLng,w.lat,w.lng))}</div>` : ''}
-    </div>
-  `).join('');
-}
-
-function flyToWp(id) {
-  const wp = waypoints.find(w => w.id === id);
-  if (!wp) return;
-  map.flyTo([wp.lat, wp.lng], 15);
-  wp.marker.openPopup();
-}
-
-function toggleWpPanel() {
-  const panel = document.getElementById('wp-panel');
-  panel.classList.toggle('open');
-  renderWpList();
-}
-
-// ============================================================
-// ELEVATION CALCULATOR
-// ============================================================
-function openElevModal() {
-  document.getElementById('elev-modal').classList.remove('hidden');
-  document.getElementById('elev-result').style.display = 'none';
-}
-
-function closeElevModal() {
-  document.getElementById('elev-modal').classList.add('hidden');
-}
-
-function calcElevation() {
-  const dist = parseFloat(document.getElementById('elev-dist').value);
-  const height = parseFloat(document.getElementById('elev-height').value);
-
-  if (isNaN(dist) || isNaN(height) || dist <= 0) {
-    alert('Geçerli değer giriniz.');
-    return;
-  }
-
-  const angleRad = Math.atan(height / dist);
-  const angleDeg = angleRad * 180 / Math.PI;
-  const slope = (height / dist * 100).toFixed(1);
-  const trueDist = Math.sqrt(dist ** 2 + height ** 2);
-
-  document.getElementById('elev-angle').textContent = angleDeg.toFixed(2) + '°';
-  document.getElementById('elev-slope').textContent = (height >= 0 ? '+' : '') + slope + '%';
-  document.getElementById('elev-true-dist').textContent = formatDistance(trueDist);
-  document.getElementById('elev-result').style.display = 'block';
-}
-
-// ============================================================
-// SERVICE WORKER REGISTRATION
-// ============================================================
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js')
-      .then(() => console.log('[TAC-MAP] SW kayıtlı'))
-      .catch(e => console.log('[TAC-MAP] SW hatası:', e));
-  });
-}
-
-// ============================================================
-// BOOT
-// ============================================================
-initMap();
-initGPS();
-
-// Show initial instruction
-setTimeout(() => showModeIndicator('📡  GPS sinyali bekleniyor...'), 500);
+var map,uMarker,uCircle,uLat=null,uLng=null,uAlt=null,uSpd=null;
+var mode='VIEW',mPts=[],mMkrs=[],mLine=null,azMkr=null,azLine=null;
+var wps=[],wpN=1,pendLat=null,pendLng=null,cm='DMS',following=false,compassOK=false;
+map=L.map('map',{zoomControl:false,attributionControl:true,center:[39,35],zoom:6});
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{maxZoom:18,minZoom:3,subdomains:'abc',crossOrigin:true,attribution:'© OSM'}).addTo(map);
+L.control.zoom({position:'topright'}).addTo(map);
+map.on('click',onMapClick);
+function startGPS(){if(!navigator.geolocation){setGPS('YOK',false);return;}navigator.geolocation.watchPosition(onPos,onPosErr,{enableHighAccuracy:true,maximumAge:1500,timeout:15000});}
+function onPos(p){uLat=p.coords.latitude;uLng=p.coords.longitude;uAlt=p.coords.altitude;uSpd=p.coords.speed;var acc=Math.round(p.coords.accuracy);setGPS('±'+acc+'m',true);updateCoords();var ll=[uLat,uLng];if(!uMarker){uMarker=L.circleMarker(ll,{radius:8,color:'#22c55e',fillColor:'#22c55e',fillOpacity:1,weight:2,zIndexOffset:1000}).addTo(map).bindPopup('<b style="color:#f59e0b">SEN BURADASIN</b>');uCircle=L.circle(ll,{radius:acc,color:'#22c55e',fillColor:'#22c55e',fillOpacity:.07,weight:1,dashArray:'4'}).addTo(map);map.setView(ll,14);}else{uMarker.setLatLng(ll);uCircle.setLatLng(ll).setRadius(acc);}if(following)map.setView(ll);updateWPList();}
+function onPosErr(){setGPS('HATA',false);}
+function setGPS(t,ok){document.getElementById('gdot').className='dot'+(ok?' on':'');document.getElementById('gtxt').textContent='GPS: '+t;}
+function setCM(m){cm=m;['dms','dd','utm'].forEach(function(x){document.getElementById('t'+x).className='ctab'+(cm===x.toUpperCase()?' on':'');});updateCoords();}
+function updateCoords(){if(uLat===null)return;var ls,lo;if(cm==='DMS'){ls=dms(uLat,'lat');lo=dms(uLng,'lon');}else if(cm==='DD'){ls=uLat.toFixed(5)+'°';lo=uLng.toFixed(5)+'°';}else{var u=toUTM(uLat,uLng);ls=u.zone+u.hem;lo=u.E+' '+u.N;}document.getElementById('clat').textContent=ls;document.getElementById('clon').textContent=lo;document.getElementById('calt').textContent=uAlt!==null?'ALT:'+Math.round(uAlt)+'m':'ALT:---m';document.getElementById('cutm').textContent=toUTM(uLat,uLng).str;document.getElementById('cspd').textContent=uSpd!==null?'SPD:'+Math.round(uSpd*3.6)+'km/h':'SPD:---';}
+function dms(d,t){var a=Math.abs(d),dd=Math.floor(a),mm=Math.floor((a-dd)*60),ss=((a-dd-mm/60)*3600).toFixed(1);var dir=t==='lat'?(d>=0?'K':'G'):(d>=0?'D':'B');return dd+'°'+mm+"'"+ss+'"'+dir;}
+function toUTM(lat,lng){var a=6378137,f=1/298.257223563,b=a*(1-f),e2=1-(b*b)/(a*a),ep2=e2/(1-e2),k0=.9996;var z=Math.floor((lng+180)/6)+1,l0=((z-1)*6-180+3)*Math.PI/180;var phi=lat*Math.PI/180,lam=lng*Math.PI/180;var N=a/Math.sqrt(1-e2*Math.pow(Math.sin(phi),2));var T=Math.pow(Math.tan(phi),2),C=ep2*Math.pow(Math.cos(phi),2),A=Math.cos(phi)*(lam-l0);var M=a*((1-e2/4-3*e2*e2/64-5*e2*e2*e2/256)*phi-(3*e2/8+3*e2*e2/32+45*e2*e2*e2/1024)*Math.sin(2*phi)+(15*e2*e2/256+45*e2*e2*e2/1024)*Math.sin(4*phi)-(35*e2*e2*e2/3072)*Math.sin(6*phi));var E=k0*N*(A+(1-T+C)*Math.pow(A,3)/6+(5-18*T+T*T+72*C-58*ep2)*Math.pow(A,5)/120)+500000;var Nv=k0*(M+N*Math.tan(phi)*(A*A/2+(5-T+9*C+4*C*C)*Math.pow(A,4)/24+(61-58*T+T*T+600*C-330*ep2)*Math.pow(A,6)/720));if(lat<0)Nv+=10000000;var hem=lat>=0?'N':'S';return{zone:z,hem:hem,E:Math.round(E),N:Math.round(Nv),str:z+hem+' '+String(Math.round(E)).padStart(7,'0')+' '+String(Math.round(Nv)).padStart(8,'0')};}
+function startCompass(){if(typeof DeviceOrientationEvent!=='undefined'&&typeof DeviceOrientationEvent.requestPermission==='function'){DeviceOrientationEvent.requestPermission().then(function(r){if(r==='granted')window.addEventListener('deviceorientation',onOrient,true);}).catch(function(){});}else{window.addEventListener('deviceorientation',onOrient,true);}}
+function onOrient(e){var h=null;if(e.webkitCompassHeading!==undefined&&e.webkitCompassHeading!==null){h=e.webkitCompassHeading;}else if(e.alpha!==null){h=(360-e.alpha)%360;}if(h===null)return;compassOK=true;document.getElementById('compass-needle').style.transform='translate(-50%,-50%) rotate('+h+'deg)';document.getElementById('compass-deg').textContent=Math.round(h)+'°';document.getElementById('compass-dir').textContent=hdgDir(h);}
+document.getElementById('compass-ring').addEventListener('click',function(){if(!compassOK)startCompass();});
+function hdgDir(d){var dirs=['K','KKD','KD','DKD','D','DGD','GD','GGD','G','GGB','GB','BGB','B','BKB','KB','KKB'];return dirs[Math.round(d/22.5)%16];}
+function setMode(m){if(mode==='MEAS')clearMeas();if(mode==='AZ')clearAz();if(m!=='GPS')following=false;mode=m;var ids={VIEW:'bview',GPS:'bgps',WP:'bwp',MEAS:'bmeas',AZ:'baz'};document.querySelectorAll('.tbtn').forEach(function(b){b.classList.remove('on');});if(ids[m])document.getElementById(ids[m]).classList.add('on');var labels={VIEW:'🗺️ GÖRÜNTÜLEME',GPS:'📡 GPS TAKİP AKTİF',WP:'📌 HARİTAYA DOKUN → NOKTA',MEAS:'📏 2 NOKTA SEÇ → MESAFE',AZ:'🧭 HEDEF SEÇ → AZİMUT'};toast(labels[m]||m);if(m==='GPS'){following=true;if(uLat!==null)map.setView([uLat,uLng],15);}map.getContainer().style.cursor=['WP','MEAS','AZ'].indexOf(m)>=0?'crosshair':'';}
+function toast(txt){var el=document.getElementById('toast');el.textContent=txt;el.classList.add('show');clearTimeout(window._t);window._t=setTimeout(function(){el.classList.remove('show');},2800);}
+function onMapClick(e){var lat=e.latlng.lat,lng=e.latlng.lng;if(mode==='WP'){pendLat=lat;pendLng=lng;document.getElementById('wpname').value='NOKTA-'+wpN;document.getElementById('wpinfo').innerHTML=dms(lat,'lat')+'<br>'+dms(lng,'lon')+'<br>UTM: '+toUTM(lat,lng).str;document.getElementById('wpm').classList.remove('hide');}else if(mode==='MEAS'){if(mPts.length>=2)clearMeas();mPts.push([lat,lng]);var mk=L.marker([lat,lng],{icon:L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#ef4444;border:2px solid #fff;border-radius:50%;box-shadow:0 0 5px #ef4444;margin:-5px"></div>',iconSize:[0,0]})}).addTo(map);mMkrs.push(mk);if(mPts.length===2){var p1=mPts[0],p2=mPts[1],dist=hav(p1[0],p1[1],p2[0],p2[1]),b1=brng(p1[0],p1[1],p2[0],p2[1]),b2=brng(p2[0],p2[1],p1[0],p1[1]);mLine=L.polyline(mPts,{color:'#ef4444',weight:2,dashArray:'6,4'}).addTo(map);showR('📏 MESAFE & AZİMUT',[['MESAFE',fmtD(dist),true],['AZİMUT →',b1.toFixed(1)+'° ('+hdgDir(b1)+')',false],['AZİMUT ←',b2.toFixed(1)+'° ('+hdgDir(b2)+')',false],['NOKTA 1',dms(p1[0],'lat')+' '+dms(p1[1],'lon'),false],['NOKTA 2',dms(p2[0],'lat')+' '+dms(p2[1],'lon'),false]]);}}else if(mode==='AZ'){clearAz();if(uLat===null){showR('🧭 AZİMUT',[['HATA','GPS bekleniyor',true]]);return;}var dist=hav(uLat,uLng,lat,lng),b=brng(uLat,uLng,lat,lng);azMkr=L.marker([lat,lng],{icon:L.divIcon({className:'',html:'<div style="width:14px;height:14px;border:2px solid #f59e0b;border-radius:50%;background:rgba(245,158,11,.25);box-shadow:0 0 8px #f59e0b;margin:-7px"></div>',iconSize:[0,0]})}).addTo(map);azLine=L.polyline([[uLat,uLng],[lat,lng]],{color:'#f59e0b',weight:2,dashArray:'8,4'}).addTo(map);showR('🧭 AZİMUT',[['AZİMUT',b.toFixed(1)+'°',true],['YÖN',hdgDir(b),false],['MESAFE',fmtD(dist),true],['HEDEF',dms(lat,'lat')+' '+dms(lng,'lon'),false]]);}}
+function clearMeas(){mPts=[];mMkrs.forEach(function(m){map.removeLayer(m);});mMkrs=[];if(mLine){map.removeLayer(mLine);mLine=null;}}
+function clearAz(){if(azMkr){map.removeLayer(azMkr);azMkr=null;}if(azLine){map.removeLayer(azLine);azLine=null;}}
+function showR(title,rows){document.getElementById('rtitle').textContent=title;document.getElementById('rbody').innerHTML=rows.map(function(r){return'<div class="rrow"><span class="rk">'+r[0]+'</span><span class="rv'+(r[2]?' hl':'')+'">'+r[1]+'</span></div>';}).join('');document.getElementById('rpanel').classList.add('show');}
+function hideR(){document.getElementById('rpanel').classList.remove('show');}
+function closeWPM(){document.getElementById('wpm').classList.add('hide');pendLat=null;pendLng=null;}
+function confirmWP(){if(pendLat===null)return;var name=document.getElementById('wpname').value.trim()||'NOKTA-'+wpN;addWP(pendLat,pendLng,name);closeWPM();}
+function addWP(lat,lng,name){var icon=L.divIcon({className:'',html:'<div style="width:10px;height:10px;background:#f59e0b;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #050c05;box-shadow:0 0 5px #f59e0b;margin:-5px"></div>',iconSize:[0,0]});var mk=L.marker([lat,lng],{icon:icon}).addTo(map);mk.bindPopup('<b style="color:#f59e0b">'+name+'</b><br>'+dms(lat,'lat')+'<br>'+dms(lng,'lon')+'<br><span style="color:#4ade80;font-size:10px">'+toUTM(lat,lng).str+'</span>');wps.push({id:wpN++,name:name,lat:lat,lng:lng,mk:mk});updateWPList();}
+function delWP(id){var i=wps.findIndex(function(w){return w.id===id;});if(i<0)return;map.removeLayer(wps[i].mk);wps.splice(i,1);updateWPList();}
+function flyWP(id){var w=wps.find(function(x){return x.id===id;});if(!w)return;map.flyTo([w.lat,w.lng],15);w.mk.openPopup();}
+function updateWPList(){var el=document.getElementById('wplist');if(!wps.length){el.innerHTML='<div style="color:#4ade80;font-size:10px;padding:8px;text-align:center">Henüz nokta yok</div>';return;}el.innerHTML=wps.map(function(w){var dist=uLat!==null?'<div class="wpic" style="color:#f59e0b">📏 '+fmtD(hav(uLat,uLng,w.lat,w.lng))+'</div>':'';return'<div class="wpi" onclick="flyWP('+w.id+')">'+'<button class="wpid" onclick="event.stopPropagation();delWP('+w.id+')">✕</button>'+'<div class="wpin">📌 '+w.name+'</div>'+'<div class="wpic">'+dms(w.lat,'lat')+'</div>'+'<div class="wpic">'+dms(w.lng,'lon')+'</div>'+dist+'</div>';}).join('');}
+function toggleWP(){document.getElementById('wpp').classList.toggle('open');updateWPList();}
+function openElev(){document.getElementById('elevm').classList.remove('hide');document.getElementById('eprev').style.display='none';}
+function closeElev(){document.getElementById('elevm').classList.add('hide');}
+function calcElev(){var d=parseFloat(document.getElementById('edist').value),h=parseFloat(document.getElementById('eheight').value);if(isNaN(d)||isNaN(h)||d<=0){alert('Geçerli değer girin!');return;}var ang=Math.atan(h/d)*180/Math.PI,slp=(h/d*100).toFixed(1),td=Math.sqrt(d*d+h*h);document.getElementById('eang').textContent=ang.toFixed(2)+'°';document.getElementById('eslp').textContent=(h>=0?'+':'')+slp+'%';document.getElementById('etd').textContent=fmtD(td);document.getElementById('eprev').style.display='block';}
+function hav(a,b,c,d){var R=6371000,dL=(c-a)*Math.PI/180,dN=(d-b)*Math.PI/180;var x=Math.sin(dL/2)*Math.sin(dL/2)+Math.cos(a*Math.PI/180)*Math.cos(c*Math.PI/180)*Math.sin(dN/2)*Math.sin(dN/2);return R*2*Math.atan2(Math.sqrt(x),Math.sqrt(1-x));}
+function brng(a,b,c,d){var dN=(d-b)*Math.PI/180,p1=a*Math.PI/180,p2=c*Math.PI/180;var y=Math.sin(dN)*Math.cos(p2),x=Math.cos(p1)*Math.sin(p2)-Math.sin(p1)*Math.cos(p2)*Math.cos(dN);return((Math.atan2(y,x)*180/Math.PI)+360)%360;}
+function fmtD(m){return m>=1000?(m/1000).toFixed(2)+' km':Math.round(m)+' m';}
+if('serviceWorker' in navigator){window.addEventListener('load',function(){navigator.serviceWorker.register('./sw.js').catch(function(){});});}
+startGPS();startCompass();
+setTimeout(function(){toast('📡 GPS sinyali bekleniyor...');},500);
 </script>
-
 </body>
 </html>
